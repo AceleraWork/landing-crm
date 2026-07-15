@@ -194,6 +194,21 @@ waitlistFormEl.addEventListener('submit', async (e) => {
 
     if (!res.ok) throw new Error('Error al registrar. Inténtalo de nuevo.');
 
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_key: '56b62494-f1ef-424a-99cd-42d62fab079c',
+        subject: `Nuevo lead: ${nombre}`,
+        from_name: 'Landing Luciano',
+        nombre: nombre,
+        email: email,
+        telefono: telefono,
+        fecha: fechaHora,
+        fuente: 'Página web',
+      }),
+    }).catch(() => {});
+
     waitlistForm.style.display = 'none';
     waitlistSuccess.style.display = 'block';
 
