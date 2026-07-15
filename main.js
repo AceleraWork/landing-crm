@@ -1,4 +1,10 @@
 // ========================================
+// CONFIG
+// ========================================
+const SHEETDB_ENDPOINT = 'https://sheetdb.io/api/v1/5z8k65dozoj3x';
+const WHATSAPP_LINK = 'https://chat.whatsapp.com/FJwqTceWj4gBKpYKBAWEWW';
+
+// ========================================
 // NAVBAR SCROLL STATE
 // ========================================
 const navbar = document.getElementById('navbar');
@@ -16,8 +22,13 @@ updateNavbarScroll();
 // MOBILE NAV TOGGLE
 // ========================================
 const navToggle = document.getElementById('navToggle');
+const navCta = document.querySelector('.navbar__cta');
+
 navToggle.addEventListener('click', () => {
-  navToggle.classList.toggle('active');
+  const isOpen = navToggle.classList.toggle('active');
+  navCta.style.display = isOpen ? 'inline-flex' : 'none';
+  navToggle.setAttribute('aria-expanded', isOpen);
+  navToggle.setAttribute('aria-label', isOpen ? 'Cerrar menú' : 'Abrir menú');
 });
 
 // ========================================
@@ -48,6 +59,10 @@ const submitBtn = document.getElementById('submitBtn');
 function openModal() {
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
+  waitlistForm.style.display = 'block';
+  waitlistSuccess.style.display = 'none';
+  formError.style.display = 'none';
+  waitlistFormEl.reset();
 }
 
 function closeModal() {
@@ -137,26 +152,59 @@ document.addEventListener('click', (e) => {
 });
 
 // ========================================
-// FORM SUBMIT (frontend only — no backend wired up yet)
+// FORM SUBMIT -> SheetDB
 // ========================================
-waitlistFormEl.addEventListener('submit', (e) => {
+waitlistFormEl.addEventListener('submit', async (e) => {
   e.preventDefault();
   formError.style.display = 'none';
+
+  const nombre = document.getElementById('waitlistName').value.trim();
+  const email = document.getElementById('waitlistEmail').value.trim();
+  const phoneRaw = document.getElementById('waitlistPhone').value.trim();
+  const telefono = `${countryCode.textContent} ${phoneRaw}`;
+
+  if (!nombre || !email || !phoneRaw) {
+    formError.textContent = 'Por favor completa todos los campos.';
+    formError.style.display = 'block';
+    return;
+  }
+
   submitBtn.disabled = true;
   submitBtn.textContent = 'Enviando...';
 
-  const data = {
-    name: document.getElementById('waitlistName').value,
-    email: document.getElementById('waitlistEmail').value,
-    phone: `${countryCode.textContent} ${document.getElementById('waitlistPhone').value}`,
-    occupation: document.getElementById('waitlistOccupation').value,
-  };
+  const now = new Date();
+  const fechaHora = now.toISOString().replace('T', ' ').slice(0, 19);
 
-  // TODO: connect this payload to the real CRM/backend once it's defined.
-  console.log('Waitlist signup (not yet sent anywhere):', data);
+  try {
+    const payload = {
+      'Fecha y hora': fechaHora,
+      'Nombre': nombre,
+      'Email': email,
+      'Teléfono': telefono,
+      'Fuente': 'Página web',
+    };
 
-  waitlistForm.style.display = 'none';
-  waitlistSuccess.style.display = 'block';
-  submitBtn.disabled = false;
-  submitBtn.textContent = 'Reservar mi lugar';
+    console.log('SheetDB payload:', JSON.stringify(payload, null, 2));
+
+    const res = await fetch(SHEETDB_ENDPOINT + '?sheet=LeadsAds&mode=RAW', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error('Error al registrar. Inténtalo de nuevo.');
+
+    waitlistForm.style.display = 'none';
+    waitlistSuccess.style.display = 'block';
+
+    setTimeout(() => {
+      window.open(WHATSAPP_LINK, '_blank');
+    }, 1500);
+  } catch (err) {
+    formError.textContent = err.message || 'Hubo un error. Inténtalo de nuevo.';
+    formError.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Unirme ahora';
+  }
 });
